@@ -13,13 +13,11 @@ services:
       ACTIVEMQ_ADMIN_PASSWORD: admin
     networks:
       - pitrac_net
-
   tomee:
     build:
       context: .
-      dockerfile: Dockerfile
     ports:
-      - "8080:8080"    # TomEE port
+      - "8080:8080"    # TomEE port (host:container)
     volumes:
       - images_share:/app/LM_Shares/Images
       - web_share:/app/LM_Shares/WebShare
