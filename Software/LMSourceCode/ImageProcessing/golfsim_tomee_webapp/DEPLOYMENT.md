@@ -174,10 +174,10 @@ All license files must be included in the distribution package under the `docs/l
    
    # Verify services
    docker-compose ps
-   docker logs golfsim_webapp
+   docker logs golfsim_tomee_webapp-tomee-1
    
    # Test ActiveMQ connection
-   curl http://localhost:8090/health
+   curl http://localhost:8080/golfsim/testmonitor
    ```
 
 2. **Distribution Package Testing**
