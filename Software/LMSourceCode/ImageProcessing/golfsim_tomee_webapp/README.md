@@ -54,6 +54,7 @@ The setup consists of two main services:
   - Maven build environment
   - Deployed PiTrac webapp
   - Shared volumes for Images and WebShare
+  - Jackson JSON Processor (for configuration and logging)
 - Default credentials: tomcat/tomcat
 
 ## Development Workflow

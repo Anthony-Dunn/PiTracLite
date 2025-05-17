@@ -95,10 +95,23 @@ All license files must be included in the distribution package under the `docs/l
    - Include Apache License 2.0
    - Document version and configuration
 
-3. **Application Code**
+3. **Application Server Runtime**
+   - Apache TomEE: Apache License 2.0
+   - Apache Tomcat (included in TomEE): Apache License 2.0
+   - Document versions used
+   - Include attribution for all bundled JavaEE components
+   - Preserve all NOTICE files
+
+4. **Application Code**
    - Include project license
    - Document any third-party components
    - Provide required attributions
+   
+5. **JSON Processing Runtime**
+   - Jackson Core: Apache License 2.0
+   - Jackson Databind: Apache License 2.0
+   - Jackson YAML: Apache License 2.0
+   - Document versions used
 
 ## Creating a Distribution Package
 

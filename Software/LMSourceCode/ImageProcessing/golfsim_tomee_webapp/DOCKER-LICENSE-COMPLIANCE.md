@@ -4,12 +4,19 @@
 
 ## Base Image
 - TomEE (10.0.0-M3-plume): Apache License 2.0
-- Source: https://github.com/apache/tomee
+  - Includes Apache Tomcat: Apache License 2.0
+  - Source: https://github.com/apache/tomee
+  - Tomcat Source: https://github.com/apache/tomcat
+  - TomEE includes additional JavaEE components, each under Apache License 2.0
 
 ## Installed Packages
 - OpenJDK 17: GPL v2 with Classpath Exception
 - Maven: Apache License 2.0
 - ActiveMQ: Apache License 2.0
+- Jackson JSON Processor: Apache License 2.0
+  - Jackson Core
+  - Jackson Databind
+  - Jackson YAML (Log4j2 configuration)
 
 ## Project Licenses
 This container includes components covered by the following licenses:
