@@ -21,12 +21,15 @@ This container includes components covered by the following licenses:
 
 ## Compliance Notes
 1. Source code availability:
-   - All modifications to GPL components are available at [repository URL]
+   ⚠️ **NO MODIFICATIONS TO GPL COMPONENTS ARE PERMITTED**
+   - This project uses GPL components strictly as-is
+   - No modifications to GPL-licensed code are allowed
    - Build instructions are provided in README.md
+   - Source code for GPL components is available from their original sources
 
 2. License notices:
-   - Full license texts are included in /usr/share/doc/
-   - Attribution notices are preserved
+   - Full license texts are included in development container
+   - Attribution notices are preserved in source code
 
 3. Third-party components:
    - All dependencies are tracked in pom.xml

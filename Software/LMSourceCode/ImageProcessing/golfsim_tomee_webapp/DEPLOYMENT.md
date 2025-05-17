@@ -77,6 +77,16 @@ pitrac-distribution/
 
 ## License Requirements for Distribution
 
+### License File Organization
+All license files must be included in the distribution package under the `docs/licenses/` directory:
+- Full license texts
+- Attribution notices
+- Third-party license documentation
+- Modification notices (if applicable)
+- Source code availability statements
+
+### Component-Specific Requirements
+
 1. **OpenJDK Runtime**
    - Include GPL v2 with Classpath Exception notice
    - Document version and source availability
