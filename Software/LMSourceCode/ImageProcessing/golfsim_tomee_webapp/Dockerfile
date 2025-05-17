@@ -1,3 +1,11 @@
+# License Compliance Information
+# This Dockerfile creates a container that includes:
+# - TomEE (Apache License 2.0)
+# - OpenJDK (GPL v2 with Classpath Exception)
+# - Maven (Apache License 2.0)
+# - ActiveMQ (Apache License 2.0)
+# See DOCKER-LICENSE-COMPLIANCE.md for full license details
+
 # Use TomEE plume as base image
 FROM tomee:10.0.0-M3-plume
 
@@ -53,6 +61,9 @@ RUN cp -r /app/PiTrac/Software/LMSourceCode/ImageProcessing/golfsim_tomee_webapp
 
 # Create volume mount points
 VOLUME ["/app/LM_Shares/Images", "/app/LM_Shares/WebShare"]
+
+# Copy license compliance documentation
+COPY DOCKER-LICENSE-COMPLIANCE.md /usr/share/doc/
 
 # Expose TomEE ports
 EXPOSE 8080

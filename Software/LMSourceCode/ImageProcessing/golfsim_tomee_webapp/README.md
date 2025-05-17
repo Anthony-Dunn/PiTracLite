@@ -1,5 +1,9 @@
 # PiTrac TomEE WebApp - Docker Quick Start Guide
 
+> **IMPORTANT**: This Docker configuration is intended for development and testing purposes only. 
+> It is not intended for redistribution or production deployment to end users.
+> For production deployment requirements, please refer to the main project documentation.
+
 This guide helps you quickly set up the PiTrac TomEE WebApp development environment using Docker. The containerized setup includes both ActiveMQ and TomEE services.
 
 ## Prerequisites
