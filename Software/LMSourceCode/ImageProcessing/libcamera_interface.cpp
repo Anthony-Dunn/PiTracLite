@@ -66,6 +66,8 @@ namespace golf_sim {
     long LibCameraInterface::kCamera1StillShutterTimeuS = 15000;
     long LibCameraInterface::kCamera2StillShutterTimeuS = 15000;
 
+    int isLite = GolfSimConfiguration::GetConstant<int>("gs_config.strobing.isLite", 0);
+
     // The system will start in a full-screen watching mode, but ensure 
     // we set it up once just in case
     LibCameraInterface::CropConfiguration LibCameraInterface::camera_crop_configuration_ = kCropUnknown;
@@ -453,6 +455,7 @@ bool DiscoverCameraLocation(const GsCameraNumber camera_number, int& media_numbe
     s += "    do\n";
     s += "        rm -f discover_result.txt\n";
     s += "        media-ctl -d \"/dev/media$m\" --print-dot | grep imx > discover_media.txt\n";
+    s += "        awk -F\"imx219 \" '{print $2}' < discover_media.txt | cut -d- -f1 > discover_device.txt\n";
     s += "        awk -F\"imx296 \" '{print $2}' < discover_media.txt | cut -d- -f1 > discover_device.txt\n";
     s += "        echo -n -e \"$m \" > discover_result.txt\n";
     s += "        cat discover_device.txt >> discover_result.txt\n";
@@ -736,7 +739,14 @@ bool ConfigureLibCameraOptions(RPiCamEncoder& app, const cv::Vec2i& cropping_win
 
     if (GolfSimConfiguration::GetPiModel() == GolfSimConfiguration::PiModel::kRPi5) {
         GS_LOG_TRACE_MSG(trace, "Detected PiModel::kRPi5 and camera 1.");
-        options->tuning_file = "/usr/share/libcamera/ipa/rpi/pisp/imx296.json";
+        if (isLite == 1)
+        {
+            options->tuning_file = "/usr/share/libcamera/ipa/rpi/pisp/imx219.json";
+        }
+        else
+        {
+            options->tuning_file = "/usr/share/libcamera/ipa/rpi/pisp/imx296.json";
+        }
     }
     else {
         GS_LOG_TRACE_MSG(trace, "Detected PiModel::kRPi4 and camera 1.");
@@ -776,8 +786,16 @@ std::string GetCmdLineForMediaCtlCropping(const GsCameraNumber camera_number, cv
     }
 
     s += "#!/bin/sh\n";
-    s += "if  media-ctl -d \"/dev/media" + std::to_string(media_number) + "\" --set-v4l2 \"'imx296 " + std::to_string(device_number) + "-001a':0 [fmt:SBGGR10_1X10/" + std::to_string(croppedHW[0]) + "x" + std::to_string(croppedHW[1]) + " crop:(" + std::to_string(crop_offset_xY[0]) + "," + std::to_string(crop_offset_xY[1]) + ")/" + 
-        std::to_string(croppedHW[0]) + "x" + std::to_string(croppedHW[1]) + "]\" > /dev/null;  then  echo -e \"/dev/media" + std::to_string(media_number) + "\" > /dev/null; break;  fi\n";
+    if (isLite == 1)
+    {
+        s += "if  media-ctl -d \"/dev/media" + std::to_string(media_number) + "\" --set-v4l2 \"'imx219 " + std::to_string(device_number) + "-001a':0 [fmt:SBGGR10_1X10/" + std::to_string(croppedHW[0]) + "x" + std::to_string(croppedHW[1]) + " crop:(" + std::to_string(crop_offset_xY[0]) + "," + std::to_string(crop_offset_xY[1]) + ")/" +
+            std::to_string(croppedHW[0]) + "x" + std::to_string(croppedHW[1]) + "]\" > /dev/null;  then  echo -e \"/dev/media" + std::to_string(media_number) + "\" > /dev/null; break;  fi\n";
+    }
+    else
+    {
+        s += "if  media-ctl -d \"/dev/media" + std::to_string(media_number) + "\" --set-v4l2 \"'imx296 " + std::to_string(device_number) + "-001a':0 [fmt:SBGGR10_1X10/" + std::to_string(croppedHW[0]) + "x" + std::to_string(croppedHW[1]) + " crop:(" + std::to_string(crop_offset_xY[0]) + "," + std::to_string(crop_offset_xY[1]) + ")/" +
+            std::to_string(croppedHW[0]) + "x" + std::to_string(croppedHW[1]) + "]\" > /dev/null;  then  echo -e \"/dev/media" + std::to_string(media_number) + "\" > /dev/null; break;  fi\n";
+    }
 
     return s;
 }
@@ -1036,7 +1054,14 @@ LibcameraJpegApp* ConfigureForLibcameraStill(const GsCameraNumber camera_number)
 
             if (GolfSimConfiguration::GetPiModel() == GolfSimConfiguration::PiModel::kRPi5) {
                 GS_LOG_TRACE_MSG(trace, "Detected PiModel::kRPi5 and camera 1.");
-                options->tuning_file = "/usr/share/libcamera/ipa/rpi/pisp/imx296.json";
+                if (isLite == 1)
+                {
+                    options->tuning_file = "/usr/share/libcamera/ipa/rpi/pisp/imx219.json";
+                }
+                else
+                {
+                    options->tuning_file = "/usr/share/libcamera/ipa/rpi/pisp/imx296.json";
+                }
             }
             else {
                 GS_LOG_TRACE_MSG(trace, "Detected PiModel::kRPi4 and camera 1.");
@@ -1356,7 +1381,22 @@ bool PerformCameraSystemStartup() {
                 }
             }
             else {
-                GS_LOG_TRACE_MSG(trace, "Running in single-pi mode, so not setting camera triggering (internal or external) programmatically.  Instead, please see the following discussion on how to setup the boot/firmware.config.txt dtoverlays for triggering:  https://forums.raspberrypi.com/viewtopic.php?p=2315464#p2315464.");
+                if (isLite == 1)
+                {
+                    std::string trigger_mode_command = "sudo $PITRAC_ROOT/ImageProcessing/CameraTools/setCameraTriggerInternal.sh";
+
+                    GS_LOG_TRACE_MSG(trace, "trigger_mode_command = " + trigger_mode_command);
+                    int command_result = system(trigger_mode_command.c_str());
+
+                    if (command_result != 0) {
+                        GS_LOG_TRACE_MSG(trace, "system(trigger_mode_command) failed.");
+                        return false;
+                    }
+                }
+                else
+                {
+                    GS_LOG_TRACE_MSG(trace, "Running in single-pi mode, so not setting camera triggering (internal or external) programmatically.  Instead, please see the following discussion on how to setup the boot/firmware.config.txt dtoverlays for triggering:  https://forums.raspberrypi.com/viewtopic.php?p=2315464#p2315464.");
+                }
             }
         }
         break;
@@ -1376,7 +1416,22 @@ bool PerformCameraSystemStartup() {
                 }
             }
             else {
-                GS_LOG_TRACE_MSG(error, "Running in single-pi mode, so not setting camera triggering (internal or external) programmatically.  Instead, please see the following discussion on how to setup the boot/firmware.config.txt dtoverlays for triggering:  https://forums.raspberrypi.com/viewtopic.php?p=2315464#p2315464.");
+                if (isLite == 1)
+                {
+                    std::string trigger_mode_command = "sudo $PITRAC_ROOT/ImageProcessing/CameraTools/setCameraTriggerExternal.sh";
+
+                    GS_LOG_TRACE_MSG(trace, "trigger_mode_command = " + trigger_mode_command);
+                    int command_result = system(trigger_mode_command.c_str());
+
+                    if (command_result != 0) {
+                        GS_LOG_TRACE_MSG(trace, "system(trigger_mode_command) failed.");
+                        return false;
+                    }
+                }
+                else
+                {
+                    GS_LOG_TRACE_MSG(trace, "Running in single-pi mode, so not setting camera triggering (internal or external) programmatically.  Instead, please see the following discussion on how to setup the boot/firmware.config.txt dtoverlays for triggering:  https://forums.raspberrypi.com/viewtopic.php?p=2315464#p2315464.");
+                }
             }
 
             // Make sure we are using the NOIR settings
