@@ -245,7 +245,8 @@
             "kPracticeBallSpeedSlowdownPercentage": "4.0",
             "kPuttingBallSpeedSlowdownPercentage": "5.2",
             "kBaudRatePulseMultiplier": "1.0",
-            "kCameraRequiresFlushPulse": "0"
+            "kCameraRequiresFlushPulse": "0",
+            "isLite": "1"
         },
         "image_capture": {
             "kMaxWatchingCropWidth": "96",

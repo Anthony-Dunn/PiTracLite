@@ -63,6 +63,7 @@ namespace golf_sim {
 
 	// NOTE - lgpio library appears to use BCM pin numbering by default
 	const int kPulseTriggerOutputPin = 25;   // This is BCM GPIO25, pin 22
+	const int kStrobeOutputPin = 24;         // This is BCM GPIO24, pin 18
 	const int kRPi4GpioChipNumber = 0;
 	const int kRPi5GpioChipNumber = 4;
 	const int kRPi5SpiDeviceNumber = 0;
@@ -92,6 +93,7 @@ namespace golf_sim {
 	// Whatever test is run, it will run for this long in seconds
 	const int kTestPeriodSecs = 10; //  120;
 
+	const int isLite = 0;
 
 	int PulseStrobe::AlignLengthToWordSize(int initialBufferLength, int wordSizeBits) {
 
@@ -103,11 +105,11 @@ namespace golf_sim {
 	}
 
 	char* PulseStrobe::BuildPulseTrain(const unsigned long baud_rate,
-									const std::vector<float>& intervals,
-									const int number_bits_for_on_pulse,
-									const unsigned int kBitsPerWord, 
-									unsigned long& result_length,
-									bool turn_off_strobes) {
+		const std::vector<float>& intervals,
+		const int number_bits_for_on_pulse,
+		const unsigned int kBitsPerWord,
+		unsigned long& result_length,
+		bool turn_off_strobes) {
 
 		// TBD - All this setup needs to be done prior to the triggering so as not to waste time
 
@@ -152,10 +154,10 @@ namespace golf_sim {
 			// Determine the on and off bits to fill the next two bytes
 			unsigned char first_byte_bit_pattern, second_byte_bit_pattern;
 
-			remainder_bits_from_prior_pulse = GetNextTwoPulseBytes(next_pattern_zero_bits_pad, 
-																   number_bits_for_on_pulse,
-																   first_byte_bit_pattern,
-																   second_byte_bit_pattern);
+			remainder_bits_from_prior_pulse = GetNextTwoPulseBytes(next_pattern_zero_bits_pad,
+				number_bits_for_on_pulse,
+				first_byte_bit_pattern,
+				second_byte_bit_pattern);
 
 			// Start with a short "on" pulse to turn on the strobe LED light
 			if (turn_off_strobes) {
@@ -176,7 +178,7 @@ namespace golf_sim {
 				long off_bits = (long)(std::round(((strobe_off_time_ms / 1000.0) * bytesFor1000Ms * 8.0)) - remainder_bits_from_prior_pulse) - number_bits_for_on_pulse;
 				if (off_bits < 0) {
 					off_bits = 0;
-				}				
+				}
 
 				int one_pulse_cycle_length_bytes = (int)std::floor(off_bits / 8);
 
@@ -198,7 +200,7 @@ namespace golf_sim {
 
 			if (current_byte > (double)kMaxPulseBufferSize * 0.9) {
 				GS_LOG_MSG(error, "Pulse trigger buffer overrun.  Shutting down.  Buffer size was: " +
-					std::to_string(kMaxPulseBufferSize) + ", and current strobe is: " + 
+					std::to_string(kMaxPulseBufferSize) + ", and current strobe is: " +
 					std::to_string(strobe_off_time_ms));
 				return nullptr;
 			}
@@ -224,10 +226,10 @@ namespace golf_sim {
 		return return_buffer;
 	}
 
-	int PulseStrobe::GetNextTwoPulseBytes(const int next_pattern_zero_bits_pad, 
-										  const int number_bits_for_on_pulse,
-										  unsigned char& first_byte_bit_pattern,
-										  unsigned char& second_byte_bit_pattern) {
+	int PulseStrobe::GetNextTwoPulseBytes(const int next_pattern_zero_bits_pad,
+		const int number_bits_for_on_pulse,
+		unsigned char& first_byte_bit_pattern,
+		unsigned char& second_byte_bit_pattern) {
 		if (number_bits_for_on_pulse < 1) {
 			GS_LOG_MSG(error, "PulseStrobe::GetNextTwoPulseBytes called with number_bits_for_fast_on_pulse < 1.");
 			return -1;
@@ -310,7 +312,7 @@ namespace golf_sim {
 	}
 
 
-	
+
 
 	bool PulseStrobe::SendCameraStrobeTriggerAndShutter(int lgGpioHandle, bool send_no_strobes) {
 
@@ -335,9 +337,9 @@ namespace golf_sim {
 			}
 		}
 
-		if (camera_fast_pulse_sequence_length_ == 0 || 
-			camera_slow_pulse_sequence_length_ == 0 || 
-			buf == nullptr ) {
+		if (camera_fast_pulse_sequence_length_ == 0 ||
+			camera_slow_pulse_sequence_length_ == 0 ||
+			buf == nullptr) {
 			GS_LOG_MSG(error, "SendCameraStrobeTriggerAndShutter called before camera_pulse_sequence was set up.");
 			return false;
 		}
@@ -351,60 +353,56 @@ namespace golf_sim {
 			usleep(1000 * kPuttingStrobeDelayMs);
 		}
 
+		if (isLite == 1)
+		{
+			// In Lite mode
+			GS_LOG_TRACE_MSG(trace, "In Lite mode.");
+			// Open shutter - 
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
 
-		// Open shutter - 
-		// Note - the hardware will invert the signal to the XTR camera trigger
-		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
+			// In Lite mode: translate buf to GPIO pulses
+			GS_LOG_TRACE_MSG(trace, "In Lite mode: translating buf to GPIO pulses.");
 
-		int bytes_sent = lgSpiWrite(spiHandle_, buf, result_length);
-		bool shutter_failure = false;
+			// Define the bit time in microseconds (should match your SPI bit time, e.g., 5us)
+			constexpr int bit_time_us = 5; // Adjust as needed for your hardware
 
-		if (bytes_sent != (int)result_length) {
-			GS_LOG_MSG(error, "Main lgSpiWrite failed.  Returned " + std::to_string(bytes_sent) + ". Bytes were supposed to be: " + std::to_string(result_length));
-			shutter_failure = true;
-		}
-
-		// We have a loop here because having the vector have a lot of loooong late
-		// off-durations chews up a ton of memory.  Better to just construct the latter
-		// part of the pulse vector dynamically.  There might be a little timing-shake here
-		// because the pulse sequence is interrupted as the code starts executing again. 
-		// But, that's probably ok, as these are really long pulses anyway.  What's a few
-		// micro-seconds when we're talking about a zero-pulse period of milliseconds?
-		/*** DEPRECATED
-		if (GolfSimClubs::GetCurrentClubType() == GolfSimClubs::GsClubType::kPutter) {
-			for (int i = 0; i < kLastPulsePutterRepeats; i++) {
-
-				// Each follow-on tail pulse has an on-pulse followed by a (long) zero 
-				// (no-pulse) period.  This means the sequence ends with a long empty
-				// zero-pulse, which would be better if there was one more "on" pulse.  So
-				// we add the on pulse at the end.  Otherwise, we just waste shutter time
-				flag = lgGpioWrite(lggpio_chip_handle_, tail_repeat_pulse_sequence_, tail_repeat_sequence_length_);
-				
-				if (flag != tail_repeat_sequence_length_) {
-					GS_LOG_MSG(error, "First Follow-on lgGpioWrite failed.  Returned " + std::to_string(flag));
-					shutter_failure = true;
-				}
-
-				uint16_t on_pulse{ 0b1000000000000000 };
-
-				flag = lgGpioWrite(lggpio_chip_handle_, (char*)&on_pulse, 2);
-
-				if (flag != 2) {
-					GS_LOG_MSG(error, "Second Follow-on lgGpioWrite failed.  Returned " + std::to_string(flag));
-					shutter_failure = true;
+			for (unsigned long i = 0; i < result_length; ++i) {
+				unsigned char byte = static_cast<unsigned char>(buf[i]);
+				for (int bit = 7; bit >= 0; --bit) {
+					bool on = (byte >> bit) & 0x01;
+					// XTRIG is active low: LOW = start integration, HIGH = end integration
+					lgGpioWrite(lggpio_chip_handle_, kStrobeOutputPin, on ? kOFF : kON);
+					usleep(bit_time_us);
 				}
 			}
+			// Close shutter
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
+			
 		}
-		*****/
+		else
+		{
 
-		// Close shutter
-		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+			// Open shutter - 
+			// Note - the hardware will invert the signal to the XTR camera trigger
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
 
-		GS_LOG_TRACE_MSG(trace, "SendCameraStrobeTriggerAndShutter sent pulse sequence of length = " + std::to_string(camera_fast_pulse_sequence_length_) + " bytes.");
+			int bytes_sent = lgSpiWrite(spiHandle_, buf, result_length);
+			bool shutter_failure = false;
+
+			if (bytes_sent != (int)result_length) {
+				GS_LOG_MSG(error, "Main lgSpiWrite failed.  Returned " + std::to_string(bytes_sent) + ". Bytes were supposed to be: " + std::to_string(result_length));
+				shutter_failure = true;
+			}
+
+			// Close shutter
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+
+			GS_LOG_TRACE_MSG(trace, "SendCameraStrobeTriggerAndShutter sent pulse sequence of length = " + std::to_string(camera_fast_pulse_sequence_length_) + " bytes.");
 
 
 
-		return !shutter_failure;
+			return !shutter_failure;
+		}
 #endif // #ifdef __unix__  // Ignore in Windows environment
 		return true;
 	}
@@ -417,6 +415,9 @@ namespace golf_sim {
 			GS_LOG_MSG(warning, "PulseStrobe::InitGPIOSystem called more than once!  Ignoring");
 			return true;
 		}
+		// Set isLite strobe mode
+		GolfSimConfiguration::SetConstant("gs_config.strobing.isLite", isLite);
+
 #ifdef __unix__  // Ignore in Windows environment
 
 		if (GolfSimConfiguration::GetPiModel() == GolfSimConfiguration::PiModel::kRPi5) {
@@ -436,7 +437,19 @@ namespace golf_sim {
 			return false;
 		}
 
-		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+		if (lgGpioClaimOutput(lggpio_chip_handle_, 0, kStrobeOutputPin, 0) != LG_OKAY) {
+			GS_LOG_MSG(error, "PulseStrobe::InitGPIOSystem failed to ClaimOutput for strobe pin");
+			return false;
+		}
+
+		if (isLite == 1)
+		{
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
+		}
+		else
+		{
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+		}
 
 		if (callback_function != nullptr) {
 			/* TBD
@@ -444,7 +457,7 @@ namespace golf_sim {
 			gpioSetSignalFunc(SIGUSR2, callback_function);
 			gpioSetSignalFunc(SIGINT, callback_function);
 			*/
-	}
+		}
 
 #endif // #ifdef __unix__  // Ignore in Windows environment
 
@@ -466,15 +479,15 @@ namespace golf_sim {
 		long kBaudRateForFastPulses;
 		long kBaudRateForSlowPulses;
 		GolfSimConfiguration::SetConstant("gs_config.strobing.kBaudRateForFastPulses", kBaudRateForFastPulses);
-		GolfSimConfiguration::SetConstant("gs_config.strobing.kBaudRateForSlowPulses", kBaudRateForSlowPulses);
+		GolfSimConfiguration::SetConstant("gs_config.strobing.kBaudRateForSlowPulses", kBaudRateForSlowPulses);		
 
 		// Pre-compute the pulse sequences to save time later
 		GS_LOG_TRACE_MSG(trace, "Building Fast pulse sequence.");
 		camera_fast_pulse_sequence_ = PulseStrobe::BuildPulseTrain((unsigned long)kBaudRateForFastPulses, pulse_intervals_fast_ms_, number_bits_for_fast_on_pulse_,
-														kBitsPerWord, camera_fast_pulse_sequence_length_, false);
+			kBitsPerWord, camera_fast_pulse_sequence_length_, false);
 		GS_LOG_TRACE_MSG(trace, "Building Slow pulse sequence.");
 		camera_slow_pulse_sequence_ = PulseStrobe::BuildPulseTrain((unsigned long)kBaudRateForSlowPulses, pulse_intervals_slow_ms_, number_bits_for_slow_on_pulse_,
-														kBitsPerWord, camera_slow_pulse_sequence_length_, false);
+			kBitsPerWord, camera_slow_pulse_sequence_length_, false);
 		GS_LOG_TRACE_MSG(trace, "Building follow-on pulse sequence.");
 		tail_repeat_pulse_sequence_ = PulseStrobe::BuildPulseTrain((unsigned long)kBaudRateForSlowPulses, pulse_intervals_tail_repeat_ms_, number_bits_for_slow_on_pulse_,
 			kBitsPerWord, tail_repeat_sequence_length_, false);
@@ -510,9 +523,18 @@ namespace golf_sim {
 
 	void PulseStrobe::SendOnOffPulse(long length_us) {
 #ifdef __unix__  // Ignore in Windows environment
-		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
-		usleep(length_us);
-		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+		if (isLite == 1) 
+		{
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+			usleep(length_us);
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
+		}
+		else 
+		{
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
+			usleep(length_us);
+			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+		}
 #endif // #ifdef __unix__  // Ignore in Windows environment
 	}
 
@@ -574,8 +596,8 @@ namespace golf_sim {
 		// This next pulse gets the camera2 state machine ready to take an actual image
 		SendOnOffPulse(kShutterSpeed - kShutterOffset);
 
-		GolfSimConfiguration::SetConstant("gs_config.ball_exposure_selection.kUsePreImageSubtraction", 
-												GolfSimCamera::kUsePreImageSubtraction);
+		GolfSimConfiguration::SetConstant("gs_config.ball_exposure_selection.kUsePreImageSubtraction",
+			GolfSimCamera::kUsePreImageSubtraction);
 
 		if (GolfSimCamera::kUsePreImageSubtraction) {
 			GS_LOG_TRACE_MSG(trace, "Sent last priming pulse before pre-image.");
@@ -646,7 +668,7 @@ namespace golf_sim {
 		// GS_LOG_TRACE_MSG(trace, "Sent final camera trigger(s) and strobe pulses.");
 		SendCameraStrobeTriggerAndShutter(lggpio_chip_handle_);
 
-			if (!golf_sim::GolfSimCamera::kCameraRequiresFlushPulse) {
+		if (!golf_sim::GolfSimCamera::kCameraRequiresFlushPulse) {
 
 			GS_LOG_TRACE_MSG(trace, "Waiting a moment to send flush trigger.");
 
@@ -675,7 +697,7 @@ namespace golf_sim {
 			intervals = pulse_intervals_fast_ms_;
 		}
 
-		/**** DEPRECATED 
+		/**** DEPRECATED
 		// Add the intervals that would have been dynamically created
 		for (int i = 0; i < kLastPulsePutterRepeats; i++) {
 			intervals.push_back(last_pulse_off_time);
