@@ -12,6 +12,8 @@
 #include "gs_options.h"
 #include "gs_config.h"
 #include "gs_ipc_system.h"
+#include "spi_st7789v_display.h"
+#include <map>
 
 #include "gs_message_consumer.h"
 #include "gs_message_producer.h"
@@ -244,6 +246,18 @@ namespace golf_sim {
 
     bool GolfSimIpcSystem::DispatchResultsMessage(const GolfSimIPCMessage& message) {
 
+
+        if (message.IPCMessageType == GolfSimIPCMessage::IPCMessageType::kResults) {
+
+            // Update the display with the current result state
+            if (message.GetResults().result_type_ == GsIPCResultType::kHit) {
+                DisplayResultsGrid(message);
+            }
+            else {
+                DisplayStateLine(message.GetResults().result_type_);
+            }
+        }
+               
         // The LM system doesn't currently do anything if it gets a results message.
         // These messages are mostly destined for the PiTrac GUI
         GS_LOG_TRACE_MSG(trace, "DispatchResultsMessage Received Ipc Message.");
@@ -628,6 +642,96 @@ namespace golf_sim {
         std::this_thread::yield();
         return true;
     }
+
+    void DisplayResultsGrid(const GolfSimIPCMessage& message) {
+        static ST7789VDisplay display;
+        static bool initialized = false;
+        if (!initialized) {
+            if (!display.init()) {
+                printf("Display init failed\n");
+                return;
+            }
+            initialized = true;
+        }
+        display.fillScreen(0x0000); // Clear screen (black)
+
+        // Extract the result
+        const auto& result = message.GetResults();
+
+        // Prepare the 6 fields using the first six parameters
+        char field[6][32];
+        snprintf(field[0], sizeof(field[0]), "Carry: %d yd", CvUtils::MetersToYards(result.carry_meters_));
+        snprintf(field[1], sizeof(field[1]), "Speed: %.1f mph", CvUtils::MetersPerSecondToMPH(result.speed_mpers_));
+        snprintf(field[2], sizeof(field[2]), "Launch: %.1f deg", result.launch_angle_deg_);
+        snprintf(field[3], sizeof(field[3]), "Side: %.1f deg", result.side_angle_deg_);
+        snprintf(field[4], sizeof(field[4]), "BSpin: %d", result.back_spin_rpm_);
+        snprintf(field[5], sizeof(field[5]), "SSpin: %d", result.side_spin_rpm_);
+
+        // Grid layout
+        const int cols = 3, rows = 2;
+        const int cell_w = 320 / cols;
+        const int cell_h = 240 / rows;
+        const int text_color = 0xFFFF; // White
+
+        for (int i = 0; i < 6; ++i) {
+            int col = i % cols;
+            int row = i / cols;
+            int x = col * cell_w + 4; // 4 px margin
+            int y = row * cell_h + 20; // 20 px from top of cell for centering
+            display.drawText(x, y, field[i], text_color);
+        }
+    }
+
+    void DisplayStateLine(GsIPCResultType state) {
+        static ST7789VDisplay display;
+        static bool initialized = false;
+        if (!initialized) {
+            if (!display.init()) {
+                printf("Display init failed\n");
+                return;
+            }
+            initialized = true;
+        }
+
+        // Get message and color
+        static std::map<GsIPCResultType, std::string> result_table = {
+            { GsIPCResultType::kUnknown, "Unknown" },
+            { GsIPCResultType::kWaitingForBallToAppear, "Waiting For Ball" },
+            { GsIPCResultType::kMultipleBallsPresent, "Multiple Balls Present" },
+            { GsIPCResultType::kPausingForBallStabilization, "Waiting For Placement To Stabilize" },
+            { GsIPCResultType::kBallPlacedAndReadyForHit, "Ball Placed" },
+            { GsIPCResultType::kHit, "Hit" },
+            { GsIPCResultType::kError, "Error" },
+            { GsIPCResultType::kCalibrationResults, "Calibration Results" }
+        };
+
+        std::string msg = result_table.count(state) ? result_table[state] : "Unknown";
+        uint16_t color = state_color_table.count(state) ? state_color_table[state] : 0xFFFF;
+
+        display.fillScreen(0x0000); // Clear screen (black)
+
+        // Center text
+        int16_t x = 0, y = 0;
+        int16_t screen_w = 320, screen_h = 240;
+        int16_t text_w = msg.length() * 14; // Estimate: 14px per char (adjust as needed)
+        int16_t text_h = 24; // Estimate: 24px height (adjust as needed)
+        x = (screen_w - text_w) / 2;
+        y = (screen_h - text_h) / 2;
+
+        display.drawText(x, y, msg.c_str(), color);
+    }
+
+    // State color mapping (RGB565)
+    static std::map<GsIPCResultType, uint16_t> state_color_table = {
+        { GsIPCResultType::kUnknown,                0x7BEF }, // Gray
+        { GsIPCResultType::kWaitingForBallToAppear, 0xFFE0 }, // Yellow
+        { GsIPCResultType::kMultipleBallsPresent,   0xF800 }, // Red
+        { GsIPCResultType::kPausingForBallStabilization, 0x07FF }, // Cyan
+        { GsIPCResultType::kBallPlacedAndReadyForHit, 0x07E0 }, // Green
+        { GsIPCResultType::kHit,                    0x001F }, // Blue
+        { GsIPCResultType::kError,                  0xF800 }, // Red
+        { GsIPCResultType::kCalibrationResults,     0xFFFF }  // White
+    };
 
 
 }
