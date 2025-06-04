@@ -353,13 +353,15 @@ namespace golf_sim {
 			usleep(1000 * kPuttingStrobeDelayMs);
 		}
 
+
+		// Open shutter - 
+		// Note - the hardware will invert the signal to the XTR camera trigger
+		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
+
+		bool shutter_failure = false;
+
 		if (isLite == 1)
 		{
-			// In Lite mode
-			GS_LOG_TRACE_MSG(trace, "In Lite mode.");
-			// Open shutter - 
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
-
 			// In Lite mode: translate buf to GPIO pulses
 			GS_LOG_TRACE_MSG(trace, "In Lite mode: translating buf to GPIO pulses.");
 
@@ -375,34 +377,23 @@ namespace golf_sim {
 					usleep(bit_time_us);
 				}
 			}
-			// Close shutter
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
-			
 		}
 		else
 		{
-
-			// Open shutter - 
-			// Note - the hardware will invert the signal to the XTR camera trigger
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
-
 			int bytes_sent = lgSpiWrite(spiHandle_, buf, result_length);
-			bool shutter_failure = false;
-
 			if (bytes_sent != (int)result_length) {
 				GS_LOG_MSG(error, "Main lgSpiWrite failed.  Returned " + std::to_string(bytes_sent) + ". Bytes were supposed to be: " + std::to_string(result_length));
 				shutter_failure = true;
 			}
-
-			// Close shutter
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
-
-			GS_LOG_TRACE_MSG(trace, "SendCameraStrobeTriggerAndShutter sent pulse sequence of length = " + std::to_string(camera_fast_pulse_sequence_length_) + " bytes.");
-
-
-
-			return !shutter_failure;
 		}
+
+		// Close shutter
+		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+
+		GS_LOG_TRACE_MSG(trace, "SendCameraStrobeTriggerAndShutter sent pulse sequence of length = " + std::to_string(camera_fast_pulse_sequence_length_) + " bytes.");
+
+		return !shutter_failure;
+
 #endif // #ifdef __unix__  // Ignore in Windows environment
 		return true;
 	}
@@ -442,14 +433,7 @@ namespace golf_sim {
 			return false;
 		}
 
-		if (isLite == 1)
-		{
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
-		}
-		else
-		{
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
-		}
+		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
 
 		if (callback_function != nullptr) {
 			/* TBD
@@ -479,7 +463,7 @@ namespace golf_sim {
 		long kBaudRateForFastPulses;
 		long kBaudRateForSlowPulses;
 		GolfSimConfiguration::SetConstant("gs_config.strobing.kBaudRateForFastPulses", kBaudRateForFastPulses);
-		GolfSimConfiguration::SetConstant("gs_config.strobing.kBaudRateForSlowPulses", kBaudRateForSlowPulses);		
+		GolfSimConfiguration::SetConstant("gs_config.strobing.kBaudRateForSlowPulses", kBaudRateForSlowPulses);
 
 		// Pre-compute the pulse sequences to save time later
 		GS_LOG_TRACE_MSG(trace, "Building Fast pulse sequence.");
@@ -523,18 +507,11 @@ namespace golf_sim {
 
 	void PulseStrobe::SendOnOffPulse(long length_us) {
 #ifdef __unix__  // Ignore in Windows environment
-		if (isLite == 1) 
-		{
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
-			usleep(length_us);
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
-		}
-		else 
-		{
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
-			usleep(length_us);
-			lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
-		}
+
+		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
+		usleep(length_us);
+		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kOFF);
+
 #endif // #ifdef __unix__  // Ignore in Windows environment
 	}
 
