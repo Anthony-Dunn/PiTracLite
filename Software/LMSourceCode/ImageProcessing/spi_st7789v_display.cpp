@@ -9,9 +9,9 @@ constexpr int ST7789V_SPI_CHANNEL = 0;   // SPI channel (CE0)
 constexpr int ST7789V_SPI_BAUD = 40000000; // 40 MHz, adjust as needed
 
 // BCM GPIO numbers (adjust as needed)
-constexpr int GPIO_DC  = 22;   // Data/Command
+constexpr int GPIO_DC  = 5;   // Data/Command
 constexpr int GPIO_RST = 27;   // Reset
-constexpr int GPIO_BL  = 17;   // Backlight
+constexpr int GPIO_BL  = 6;   // Backlight
 
 class ST7789VDisplay {
 public:
