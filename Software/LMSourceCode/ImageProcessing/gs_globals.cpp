@@ -8,5 +8,6 @@
 namespace golf_sim {
 
 	bool GolfSimGlobals::golf_sim_running_ = true;
+        int isLite = 1;
 
 }
