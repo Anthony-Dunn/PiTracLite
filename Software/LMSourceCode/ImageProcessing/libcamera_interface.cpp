@@ -66,7 +66,7 @@ namespace golf_sim {
     long LibCameraInterface::kCamera1StillShutterTimeuS = 15000;
     long LibCameraInterface::kCamera2StillShutterTimeuS = 15000;
 
-    int isLite = GolfSimConfiguration::GetConstant<int>("gs_config.strobing.isLite", 0);
+    int isLite = 1;
 
     // The system will start in a full-screen watching mode, but ensure 
     // we set it up once just in case
