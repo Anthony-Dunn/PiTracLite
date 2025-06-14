@@ -251,7 +251,8 @@ namespace golf_sim {
     bool GolfSimIpcSystem::DispatchResultsMessage(const GolfSimIPCMessage& message) {
 
 
-        if (message.IPCMessageType == GolfSimIPCMessage::IPCMessageType::kResults) {
+        if (message.GetMessageType() == GolfSimIPCMessage::IPCMessageType::kResults)
+        {
 
             // Update the display with the current result state
             if (message.GetResults().result_type_ == GsIPCResultType::kHit) {
@@ -676,7 +677,7 @@ namespace golf_sim {
 
         // Prepare the 6 fields using the first six parameters
         char field[6][32];
-        snprintf(field[0], sizeof(field[0]), "Carry: %d yd", CvUtils::MetersToYards(result.carry_meters_));
+        snprintf(field[0], sizeof(field[0]), "Carry: %d yd", static_cast<int>(CvUtils::MetersToYards(result.carry_meters_)));
         snprintf(field[1], sizeof(field[1]), "Speed: %.1f mph", CvUtils::MetersPerSecondToMPH(result.speed_mpers_));
         snprintf(field[2], sizeof(field[2]), "Launch: %.1f deg", result.launch_angle_deg_);
         snprintf(field[3], sizeof(field[3]), "Side: %.1f deg", result.side_angle_deg_);
