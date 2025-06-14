@@ -16,6 +16,7 @@ namespace golf_sim {
 	// Note that the GsColorTriplet may need to go negative to handle loop-around situations for the hue in an HSV value.  A Vec3b would not work for that, so we use a Scalar
 	using GsColorTriplet = cv::Scalar; // signed
 	using GsColor = int;
+        extern int isLite;
 
 	const short kX_index = 0;
 	const short kY_index = 1;
