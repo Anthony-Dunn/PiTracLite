@@ -93,7 +93,7 @@ namespace golf_sim {
 	// Whatever test is run, it will run for this long in seconds
 	const int kTestPeriodSecs = 10; //  120;
 
-	const int isLite = 0;
+	int isLite = 1;
 
 	int PulseStrobe::AlignLengthToWordSize(int initialBufferLength, int wordSizeBits) {
 
