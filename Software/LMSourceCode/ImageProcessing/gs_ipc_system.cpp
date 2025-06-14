@@ -13,6 +13,7 @@
 #include "gs_config.h"
 #include "gs_ipc_system.h"
 #include "spi_st7789v_display.h"
+#include "cv_utils.h"
 #include <map>
 
 #include "gs_message_consumer.h"
