@@ -40,6 +40,9 @@ namespace golf_sim {
 
     std::string GolfSimIpcSystem::kActiveMQLMIdProperty = "LM_System_ID";
 
+    void DisplayResultsGrid(const GolfSimIPCMessage& message);
+    void DisplayStateLine(GsIPCResultType state);
+
 
     cv::Mat GolfSimIpcSystem::last_received_image_;
 
@@ -644,6 +647,18 @@ namespace golf_sim {
         return true;
     }
 
+   // State color mapping (RGB565)
+    static std::map<GsIPCResultType, uint16_t> state_color_table = {
+        { GsIPCResultType::kUnknown,                0x7BEF }, // Gray
+        { GsIPCResultType::kWaitingForBallToAppear, 0xFFE0 }, // Yellow
+        { GsIPCResultType::kMultipleBallsPresent,   0xF800 }, // Red
+        { GsIPCResultType::kPausingForBallStabilization, 0x07FF }, // Cyan
+        { GsIPCResultType::kBallPlacedAndReadyForHit, 0x07E0 }, // Green
+        { GsIPCResultType::kHit,                    0x001F }, // Blue
+        { GsIPCResultType::kError,                  0xF800 }, // Red
+        { GsIPCResultType::kCalibrationResults,     0xFFFF }  // White
+    };
+
     void DisplayResultsGrid(const GolfSimIPCMessage& message) {
         static ST7789VDisplay display;
         static bool initialized = false;
@@ -722,17 +737,7 @@ namespace golf_sim {
         display.drawText(x, y, msg.c_str(), color);
     }
 
-    // State color mapping (RGB565)
-    static std::map<GsIPCResultType, uint16_t> state_color_table = {
-        { GsIPCResultType::kUnknown,                0x7BEF }, // Gray
-        { GsIPCResultType::kWaitingForBallToAppear, 0xFFE0 }, // Yellow
-        { GsIPCResultType::kMultipleBallsPresent,   0xF800 }, // Red
-        { GsIPCResultType::kPausingForBallStabilization, 0x07FF }, // Cyan
-        { GsIPCResultType::kBallPlacedAndReadyForHit, 0x07E0 }, // Green
-        { GsIPCResultType::kHit,                    0x001F }, // Blue
-        { GsIPCResultType::kError,                  0xF800 }, // Red
-        { GsIPCResultType::kCalibrationResults,     0xFFFF }  // White
-    };
+    
 
 
 }
