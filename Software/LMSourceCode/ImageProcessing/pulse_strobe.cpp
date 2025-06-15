@@ -4,7 +4,7 @@
  */
 
 
-
+#include "gs_globals.h"
 #include "logging_tools.h"
 #include "gs_options.h"
 #include "gs_config.h"
@@ -92,8 +92,6 @@ namespace golf_sim {
 
 	// Whatever test is run, it will run for this long in seconds
 	const int kTestPeriodSecs = 10; //  120;
-
-	int isLite = 1;
 
 	int PulseStrobe::AlignLengthToWordSize(int initialBufferLength, int wordSizeBits) {
 
