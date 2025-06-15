@@ -357,8 +357,9 @@ namespace golf_sim {
 		lgGpioWrite(lggpio_chip_handle_, kPulseTriggerOutputPin, kON);
 
 		bool shutter_failure = false;
+		int testlite = 1;
 
-		if (isLite == 1)
+		if (testlite == 1)
 		{
 			// In Lite mode: translate buf to GPIO pulses
 			GS_LOG_TRACE_MSG(trace, "In Lite mode: translating buf to GPIO pulses.");
@@ -405,7 +406,7 @@ namespace golf_sim {
 			return true;
 		}
 		// Set isLite strobe mode
-		GolfSimConfiguration::SetConstant("gs_config.strobing.isLite", isLite);
+		//GolfSimConfiguration::SetConstant("gs_config.strobing.isLite", isLite);
 
 #ifdef __unix__  // Ignore in Windows environment
 
