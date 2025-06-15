@@ -20,7 +20,7 @@
 
 // TBD - May need to be before ball_watcher, as there is a mman.h conflict
 #include "gs_ipc_system.h"
-
+#include "gs_globals.h"
 
 #include "ball_watcher.h"
 #include "ball_watcher_image_buffer.h"
@@ -65,8 +65,6 @@ namespace golf_sim {
 
     long LibCameraInterface::kCamera1StillShutterTimeuS = 15000;
     long LibCameraInterface::kCamera2StillShutterTimeuS = 15000;
-
-    int isLite = 1;
 
     // The system will start in a full-screen watching mode, but ensure 
     // we set it up once just in case
